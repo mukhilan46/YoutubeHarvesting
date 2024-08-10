@@ -37,6 +37,7 @@ mydb = sql.connect(host="127.0.0.1",
                    database="Youtube"
                    )
 mycursor = mydb.cursor(buffered=True)
+mycursor.execute("USE youtube_data_warehouse")
 
 # BUILDING CONNECTION WITH YOUTUBE API
 api_key = "AIzaSyDQYpHKd36QOoBloxRsemSzSITMepCzoTU"  # "AIzaSyDQYpHKd36QOoBloxRsemSzSITMepCzoTU"
@@ -258,148 +259,118 @@ if selected == "Extract & Transform":
 # VIEW PAGE
 if selected == "View":
 
-    st.write("## :orange[Select any question to get Insights]")
-    questions = st.selectbox('Questions',
-                             ['1. What are the names of all the videos and their corresponding channels?',
-                              '2. Which channels have the most number of videos, and how many videos do they have?',
-                              '3. What are the top 10 most viewed videos and their respective channels?',
-                              '4. How many comments were made on each video, and what are their corresponding video names?',
-                              '5. Which videos have the highest number of likes, and what are their corresponding channel names?',
-                              '6. What is the total number of likes and dislikes for each video, and what are their corresponding video names?',
-                              '7. What is the total number of views for each channel, and what are their corresponding channel names?',
-                              '8. What are the names of all the channels that have published videos in the year 2022?',
-                              '9. What is the average duration of all videos in each channel, and what are their corresponding channel names?',
-                              '10. Which videos have the highest number of comments, and what are their corresponding channel names?'])
+    st.write("## :orange[Select any question to get insights]")
+    questions = ['1. What are the names of all the videos and their corresponding channels?',
+                 '2. Which channels have the most number of videos, and how many videos do they have?',
+                 '3. What are the top 10 most viewed videos and their respective channels?',
+                 '4. How many comments were made on each video, and what are their corresponding video names?',
+                 '5. Which videos have the highest number of likes, and what are their corresponding channel names?',
+                 '6. What is the total number of likes and dislikes for each video, and what are their corresponding video names?',
+                 '7. What is the total number of views for each channel, and what are their corresponding channel names?',
+                 '8. What are the names of all the channels that have published videos in the year 2022?',
+                 '9. What is the average duration of all videos in each channel, and what are their corresponding channel names?',
+                 '10. Which videos have the highest number of comments, and what are their corresponding channel names?']
+    selected_question = st.selectbox("Questions", questions)
 
-    if questions == '1. What are the names of all the videos and their corresponding channels?':
-        mycursor.execute("""SELECT Video_name AS Video_name, channel_name AS Channel_Name
-                            FROM videos
-                            ORDER BY channel_name""")
+    if selected_question == questions[0]:
+        mycursor.execute("""
+                SELECT Title AS Video_Title, Channel_name AS Channel_Name 
+                FROM videos
+            """)
         df = pd.DataFrame(mycursor.fetchall(), columns=mycursor.column_names)
         st.write(df)
 
-    elif questions == '2. Which channels have the most number of videos, and how many videos do they have?':
-        mycursor.execute("""SELECT channel_name AS Channel_Name, total_videos AS Total_Videos
-                            FROM channels
-                            ORDER BY total_videos DESC""")
+    elif selected_question == questions[1]:
+        mycursor.execute("""
+                SELECT Channel_name AS Channel_Name, Total_videos AS Total_Videos 
+                FROM channels 
+                ORDER BY Total_videos DESC
+            """)
         df = pd.DataFrame(mycursor.fetchall(), columns=mycursor.column_names)
         st.write(df)
-        st.write("### :green[Number of videos in each channel :]")
-        # st.bar_chart(df,x= mycursor.column_names[0],y= mycursor.column_names[1])
-        fig = px.bar(df,
-                     x=mycursor.column_names[0],
-                     y=mycursor.column_names[1],
-                     orientation='v',
-                     color=mycursor.column_names[0]
-                     )
+        fig = px.bar(df, x="Channel_Name", y="Total_Videos", orientation='v', color="Channel_Name")
         st.plotly_chart(fig, use_container_width=True)
 
-    elif questions == '3. What are the top 10 most viewed videos and their respective channels?':
-        mycursor.execute("""SELECT channel_name AS Channel_Name, Video_name AS Video_Title, View_count AS Views 
-                            FROM videos
-                            ORDER BY views DESC
-                            LIMIT 10""")
+    elif selected_question == questions[2]:
+        mycursor.execute("""
+                SELECT Channel_name AS Channel_Name, Title AS Video_Title, Views 
+                FROM videos
+                ORDER BY views DESC
+                LIMIT 10
+            """)
         df = pd.DataFrame(mycursor.fetchall(), columns=mycursor.column_names)
         st.write(df)
-        st.write("### :green[Top 10 most viewed videos :]")
-        fig = px.bar(df,
-                     x=mycursor.column_names[2],
-                     y=mycursor.column_names[1],
-                     orientation='h',
-                     color=mycursor.column_names[0]
-                     )
+        fig = px.bar(df, x="Views", y="Video_Title", orientation='h', color="Channel_Name")
         st.plotly_chart(fig, use_container_width=True)
 
-    elif questions == '4. How many comments were made on each video, and what are their corresponding video names?':
-        mycursor.execute("""SELECT a.video_id AS Video_id, Video_name AS Video_Title, b.Total_Comments
-                            FROM videos AS a
-                            LEFT JOIN (SELECT video_id,COUNT(comment_id) AS Total_Comments
-                            FROM comments GROUP BY video_id) AS b
-                            ON a.video_id = b.video_id
-                            ORDER BY b.Total_Comments DESC""")
+    elif selected_question == questions[3]:
+        mycursor.execute("""
+                SELECT v.Title AS Video_Title, COUNT(c.Comment_id) AS Comment_Count
+                FROM videos v
+                LEFT JOIN comments c ON v.Video_id = c.Video_id
+                GROUP BY v.Title
+            """)
         df = pd.DataFrame(mycursor.fetchall(), columns=mycursor.column_names)
         st.write(df)
-
-    elif questions == '5. Which videos have the highest number of likes, and what are their corresponding channel names?':
-        mycursor.execute("""SELECT channel_name AS Channel_Name,Video_name AS Title,Like_count AS Like_Count 
-                            FROM videos
-                            ORDER BY Like_count DESC
-                            LIMIT 10""")
-        df = pd.DataFrame(mycursor.fetchall(), columns=mycursor.column_names)
-        st.write(df)
-        st.write("### :green[Top 10 most liked videos :]")
-        fig = px.bar(df,
-                     x=mycursor.column_names[2],
-                     y=mycursor.column_names[1],
-                     orientation='h',
-                     color=mycursor.column_names[0]
-                     )
+        fig = px.bar(df, x="Comment_Count", y="Video_Title", orientation='h')
         st.plotly_chart(fig, use_container_width=True)
 
-    elif questions == '6. What is the total number of likes and dislikes for each video, and what are their corresponding video names?':
-        mycursor.execute("""SELECT Video_name AS Title, Like_count AS Like_count
-                            FROM videos
-                            ORDER BY Like_count DESC""")
+    elif selected_question == questions[4]:
+        mycursor.execute("""
+                SELECT v.Title AS Video_Title, v.Likes AS Like_Count, v.Views AS View_Count, v.Channel_name AS Channel_Name
+                FROM videos v
+                WHERE v.Likes = (SELECT MAX(Likes) FROM videos)
+            """)
         df = pd.DataFrame(mycursor.fetchall(), columns=mycursor.column_names)
         st.write(df)
 
-    elif questions == '7. What is the total number of views for each channel, and what are their corresponding channel names?':
-        mycursor.execute("""SELECT channel_name AS Channel_Name, channel_views AS Views
-                            FROM channels
-                            ORDER BY views DESC""")
+    elif selected_question == questions[5]:
+        mycursor.execute("""
+                SELECT v.Title AS Video_Title, v.Likes AS Like_Count, v.Views AS View_Count
+                FROM videos v
+            """)
         df = pd.DataFrame(mycursor.fetchall(), columns=mycursor.column_names)
         st.write(df)
-        st.write("### :green[Channels vs Views :]")
-        fig = px.bar(df,
-                     x=mycursor.column_names[0],
-                     y=mycursor.column_names[1],
-                     orientation='v',
-                     color=mycursor.column_names[0]
-                     )
+
+    elif selected_question == questions[6]:
+        mycursor.execute("""
+                SELECT c.Channel_name AS Channel_Name, SUM(v.Views) AS Total_Views
+                FROM videos v
+                JOIN channels c ON v.Channel_id = c.Channel_id
+                GROUP BY c.Channel_name
+            """)
+        df = pd.DataFrame(mycursor.fetchall(), columns=mycursor.column_names)
+        st.write(df)
+        fig = px.bar(df, x="Total_Views", y="Channel_Name", orientation='h', color="Channel_Name")
         st.plotly_chart(fig, use_container_width=True)
 
-    elif questions == '8. What are the names of all the channels that have published videos in the year 2022?':
-        mycursor.execute("""SELECT channel_name AS Channel_Name
-                            FROM videos
-                            WHERE published_date LIKE '2022%'
-                            GROUP BY channel_name
-                            ORDER BY channel_name""")
+    elif selected_question == questions[7]:
+        mycursor.execute("""
+                SELECT Channel_name AS Channel_Name
+                FROM videos
+                WHERE YEAR(Published_date) = 2022
+            """)
         df = pd.DataFrame(mycursor.fetchall(), columns=mycursor.column_names)
         st.write(df)
 
-    elif questions == '9. What is the average duration of all videos in each channel, and what are their corresponding channel names?':
-        mycursor.execute("""SELECT channel_name AS Channel_Name,
-                            AVG(duration)/60 AS "Average_Video_Duration (mins)"
-                            FROM videos
-                            GROUP BY channel_name
-                            ORDER BY AVG(duration)/60 DESC""")
+    elif selected_question == questions[8]:
+        mycursor.execute("""
+                SELECT Channel_name AS Channel_Name, AVG(Duration) AS Average_Duration
+                FROM videos
+                GROUP BY Channel_name
+            """)
         df = pd.DataFrame(mycursor.fetchall(), columns=mycursor.column_names)
         st.write(df)
-        st.write("### :green[Avg video duration for channels :]")
-        fig = px.bar(df,
-                     x=mycursor.column_names[0],
-                     y=mycursor.column_names[1],
-                     orientation='v',
-                     color=mycursor.column_names[0]
-                     )
+        fig = px.bar(df, x="Average_Duration", y="Channel_Name", orientation='h', color="Channel_Name")
         st.plotly_chart(fig, use_container_width=True)
 
-    elif questions == '10. Which videos have the highest number of comments, and what are their corresponding channel names?':
-        mycursor.execute("""SELECT channel_name AS Channel_Name,Video_id AS Video_ID,Comment_count AS Comments
-                            FROM videos
-                            ORDER BY comments DESC
-                            LIMIT 10""")
+    elif selected_question == questions[9]:
+        mycursor.execute("""
+                SELECT v.Title AS Video_Title, COUNT(c.Comment_id) AS Comment_Count
+                FROM videos v
+                LEFT JOIN comments c ON v.Video_id = c.Video_id
+                GROUP BY v.Title
+                ORDER BY Comment_Count DESC
+            """)
         df = pd.DataFrame(mycursor.fetchall(), columns=mycursor.column_names)
         st.write(df)
-        st.write("### :green[Videos with most comments :]")
-        fig = px.bar(df,
-                     x=mycursor.column_names[1],
-                     y=mycursor.column_names[2],
-                     orientation='v',
-                     color=mycursor.column_names[0]
-                     )
-        st.plotly_chart(fig, use_container_width=True)
-
-
-
-
