@@ -37,8 +37,6 @@ mydb = sql.connect(host="127.0.0.1",
                    database="Youtube"
                    )
 mycursor = mydb.cursor(buffered=True)
-mycursor.execute("youtube")
-
 
 # BUILDING CONNECTION WITH YOUTUBE API
 api_key = "AIzaSyDQYpHKd36QOoBloxRsemSzSITMepCzoTU"  # "AIzaSyDQYpHKd36QOoBloxRsemSzSITMepCzoTU"
